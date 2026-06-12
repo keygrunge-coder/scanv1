@@ -1,242 +1,319 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>SRF - Shopee Data Sekar Footwear</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scan Paket V3</title>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f3f4f6}
-.header{background:#111827;color:white;padding:14px 20px}
-.container{padding:20px}
-.card{background:white;padding:16px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.upload-box{border:2px dashed #d1d5db;padding:40px;text-align:center;border-radius:12px;background:#fafafa}
-button{padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:white;font-weight:bold}
-
-.table-header,.table-row{
-display:grid;
-grid-template-columns:50px 1fr 80px 120px;
-gap:10px;padding:10px 0;align-items:center;
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --dark: #0f172a;
+  --bg-body: #f8fafc;
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  
+  --keluar-main: #22c55e;
+  --keluar-bg: #dcfce7;
+  --keluar-text: #166534;
+  
+  --gagal-main: #f59e0b;
+  --gagal-bg: #fef3c7;
+  --gagal-text: #92400e;
+  
+  --gudang-main: #ef4444;
+  --gudang-bg: #fee2e2;
+  --gudang-text: #991b1b;
 }
-.table-header{font-weight:bold;border-bottom:2px solid #e5e7eb}
-.table-row{border-bottom:1px solid #eee}
-.col-no{text-align:center}
-.col-qty{text-align:right;font-weight:bold}
-.col-gmv{text-align:right}
 
-.total-box{margin-top:20px;padding:14px;background:#f9fafb;border-radius:10px;font-weight:bold}
+*{ margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+body{ background: var(--bg-body); padding: 15px; color: #334155; max-width: 500px; margin: 0 auto; }
+h1{ text-align: center; margin: 10px 0 20px 0; font-size: 22px; font-weight: 800; color: var(--dark); }
+
+.counter{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.counter-box{ background: white; padding: 12px; border-radius: 12px; text-align: center; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+.counter-box h2{ font-size: 26px; font-weight: 800; color: var(--dark); }
+.counter-box div{ font-size: 12px; color: #64748b; font-weight: 600; margin-top: 2px; }
+
+.card{ background: white; border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+.card h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #475569; text-transform: uppercase; }
+
+.mode-buttons{ display: flex; flex-direction: column; gap: 8px; }
+.mode-btn{ border: 2px solid transparent; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: left; opacity: 0.5; color: white; }
+.keluar{ background: var(--keluar-main); }
+.gagal{ background: var(--gagal-main); }
+.gudang{ background: var(--gudang-main); }
+.mode-btn.active{ opacity: 1; transform: scale(1.01); }
+.keluar.active { border-color: #15803d; }
+.gagal.active { border-color: #b45309; }
+.gudang.active { border-color: #b91c1c; }
+
+.status-box{ text-align: center; font-size: 12px; font-weight: 800; padding: 12px; border-radius: 10px; margin-bottom: 14px; box-shadow: var(--card-shadow); letter-spacing: 0.5px; }
+.status-box span { font-size: 16px; display: block; margin-top: 2px; }
+.status-keluar{ background: var(--keluar-bg); color: var(--keluar-text); }
+.status-gagal{ background: var(--gagal-bg); color: var(--gagal-text); }
+.status-gudang{ background: var(--gudang-bg); color: var(--gudang-text); }
+
+video{ width: 100%; border-radius: 10px; background: black; max-height: 280px; object-fit: cover; margin-bottom: 10px; }
+.btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+.btn{ width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.btn-primary{ background: var(--primary); color: white; }
+.btn-dark{ background: var(--dark); color: white; }
+
+input{ width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; margin-bottom: 8px; font-size: 14px; outline: none; }
+input:focus { border-color: var(--primary); }
+
+#notif{ position: fixed; top: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 470px; z-index: 9999; padding: 14px; border-radius: 10px; font-weight: 700; text-align: center; box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1); display: none; }
+.success{ background: #10b981; color: white; }
+.warning{ background: var(--gagal-main); color: white; }
+.error{ background: var(--gudang-main); color: white; }
+
+.history-container { max-height: 200px; overflow-y: auto; }
+table{ width: 100%; border-collapse: collapse; }
+th,td{ padding: 10px 6px; font-size: 13px; text-align: left; }
+th{ background: #f8fafc; color: #64748b; font-weight: 700; position: sticky; top: 0; }
+td { border-bottom: 1px solid #f1f5f9; }
+
+.badge{ padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.badge-keluar{ background: var(--keluar-bg); color: var(--keluar-text); }
+.badge-gagal{ background: var(--gagal-bg); color: var(--gagal-text); }
+.badge-gudang{ background: var(--gudang-bg); color: var(--gudang-text); }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-<b>SRF Dashboard</b><br>
-<small>Shopee Data Sekar Footwear</small>
-</div>
+<h1>SCAN PAKET V3</h1>
 
-<div id="uploadPage" class="container">
+<div class="counter">
+  <div class="counter-box">
+    <h2 id="totalScan">0</h2>
+    <div>Total Scan</div>
+  </div>
+  <div class="counter-box">
+    <h2 id="totalHari">0</h2>
+    <div>Hari Ini</div>
+  </div>
+</div>
 
 <div class="card">
-Export data dari Seller Centre → Pesanan Saya → Export (.xlsx)
+  <div class="mode-buttons">
+    <button id="btnKeluar" class="mode-btn keluar active">Diserahkan ke Ekspedisi</button>
+    <button id="btnGagal" class="mode-btn gagal">Pengiriman Gagal</button>
+    <button id="btnGudang" class="mode-btn gudang">Diterima di Gudang</button>
+  </div>
 </div>
 
-<div class="upload-box">
-<input type="file" id="fileInput" accept=".xlsx,.csv"><br><br>
-<div id="status">Menunggu file...</div><br>
-<button id="processBtn" disabled>Proses Data</button>
+<div id="statusMode" class="status-box status-keluar">
+  MODE AKTIF: <span id="modeText">DISERAHKAN KE EKSPEDISI</span>
 </div>
 
+<div class="card">
+  <video id="video"></video>
+  <div class="btn-group">
+    <button id="startBtn" class="btn btn-primary">Mulai Scan Kamera</button>
+    <button id="flashBtn" class="btn btn-dark">Flash</button>
+  </div>
 </div>
 
-<div id="analysisPage" class="container" style="display:none;">
-<h2>Peringkat Produk</h2>
-<div id="productList"></div>
+<div class="card">
+  <h3>Input Manual Resi</h3>
+  <input type="text" id="manualResi" placeholder="Masukkan nomor resi...">
+  <button id="manualBtn" class="btn btn-primary">Simpan Resi</button>
 </div>
 
-<div id="detailPage" class="container" style="display:none;">
-<button onclick="backToList()">← Kembali</button>
-<h2 id="detailTitle"></h2>
-<div id="detailContent"></div>
+<div id="notif"></div>
+
+<div class="card">
+  <h3>Riwayat Terakhir</h3>
+  <div class="history-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Resi</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
+// URL Web App Google kamu yang baru saja dibuat
+const APP_URL = "https://script.google.com/macros/s/AKfycbwy8U1vgsrucO9LI_2mmwhWtcsCILrgWTipyRc9IvLnffyOHebhmDuRPRJEsCNkhYw3dg/exec";
 
-let rawData=[]
-let modelData={}
-let grandTotalQty=0
-let grandTotalGMV=0
+let currentMode = "Diserahkan ke Ekspedisi";
+let codeReader = null;
+let lastScan = "";
+let lastScanTime = 0;
 
-// ===== FILE LOAD =====
-document.getElementById("fileInput").addEventListener("change",()=>{
-document.getElementById("status").innerText="File siap diproses"
-document.getElementById("processBtn").disabled=false
-})
+let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
+renderHistory();
 
-document.getElementById("processBtn").onclick=()=>{
+document.getElementById("btnKeluar").onclick = () => setMode("Diserahkan ke Ekspedisi");
+document.getElementById("btnGagal").onclick = () => setMode("Pengiriman Gagal");
+document.getElementById("btnGudang").onclick = () => setMode("Diterima di Gudang");
 
-const file=document.getElementById("fileInput").files[0]
-const reader=new FileReader()
+function setMode(mode){
+  currentMode = mode;
+  document.querySelectorAll(".mode-btn").forEach(btn => btn.classList.remove("active"));
+  const box = document.getElementById("statusMode");
+  const txt = document.getElementById("modeText");
 
-reader.onload=e=>{
-const data=new Uint8Array(e.target.result)
-const workbook=XLSX.read(data,{type:'array'})
-const sheet=workbook.Sheets[workbook.SheetNames[0]]
-rawData=XLSX.utils.sheet_to_json(sheet)
-processData()
+  if(mode === "Diserahkan ke Ekspedisi"){
+    document.getElementById("btnKeluar").classList.add("active");
+    box.className = "status-box status-keluar";
+    txt.innerText = "DISERAHKAN KE EKSPEDISI";
+  }
+  if(mode === "Pengiriman Gagal"){
+    document.getElementById("btnGagal").classList.add("active");
+    box.className = "status-box status-gagal";
+    txt.innerText = "PENGIRIMAN GAGAL";
+  }
+  if(mode === "Diterima di Gudang"){
+    document.getElementById("btnGudang").classList.add("active");
+    box.className = "status-box status-gudang";
+    txt.innerText = "DITERIMA DI GUDANG";
+  }
 }
 
-reader.readAsArrayBuffer(file)
+function beep(freq, duration){
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  osc.frequency.value = freq;
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
 }
 
-// ===== AUTO DETECT COLUMN =====
-function getValue(row,keys){
-for(let k of keys){
-if(row[k]!==undefined) return row[k]
-}
-return null
-}
-
-// ===== PROCESS =====
-function processData(){
-
-modelData={}
-grandTotalQty=0
-grandTotalGMV=0
-
-rawData.forEach(row=>{
-
-const model=getValue(row,[
-"Nama Produk","Produk","Nama Barang"
-])
-
-const sku=getValue(row,[
-"Nama Variasi","Variasi","SKU"
-])
-
-const qty=Number(getValue(row,[
-"Jumlah","Qty","Kuantitas"
-])||0)
-
-const gmv=Number(getValue(row,[
-"Total Harga Produk","Total","GMV"
-])||0)
-
-if(!model || qty===0) return
-
-if(!modelData[model]){
-modelData[model]={total:0,totalGMV:0,sku:{}}
+function beepSuccess(){ beep(1000, 0.12); }
+function beepDuplicate(){ beep(300, 0.8); }
+function beepError(){ beep(150, 0.6); }
+function beepGudang(){
+  beep(900, 0.08);
+  setTimeout(()=>{ beep(900, 0.08); }, 150);
 }
 
-modelData[model].total+=qty
-modelData[model].totalGMV+=gmv
-
-grandTotalQty+=qty
-grandTotalGMV+=gmv
-
-if(!modelData[model].sku[sku]){
-modelData[model].sku[sku]={qty:0,gmv:0}
+function showNotif(text, type){
+  const n = document.getElementById("notif");
+  n.style.display = "block";
+  n.className = "success"; 
+  if(type === "warning") n.className = "warning";
+  if(type === "error") n.className = "error";
+  n.innerHTML = text;
+  setTimeout(()=>{ n.style.display="none"; }, 3000);
 }
 
-modelData[model].sku[sku].qty+=qty
-modelData[model].sku[sku].gmv+=gmv
+async function startScanner(){
+  try{
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    const devices = await codeReader.listVideoInputDevices();
+    let backCamera = devices.find(d => /back|rear|environment/i.test(d.label));
+    const selected = backCamera ? backCamera.deviceId : devices[0].deviceId;
 
-})
-
-showModels()
+    codeReader.decodeFromVideoDevice(selected, "video", (result)=>{
+      if(result){
+        const code = result.text.trim();
+        const now = Date.now();
+        if(code === lastScan && now - lastScanTime < 3000){ return; }
+        lastScan = code;
+        lastScanTime = now;
+        saveResi(code);
+      }
+    });
+  }catch(err){
+    showNotif("Gagal membuka kamera", "error");
+  }
 }
 
-// ===== MODEL LIST =====
-function showModels(){
+document.getElementById("startBtn").onclick = startScanner;
 
-uploadPage.style.display="none"
-analysisPage.style.display="block"
+document.getElementById("manualBtn").onclick = ()=>{
+  const resi = document.getElementById("manualResi").value.trim();
+  if(!resi) return;
 
-const list=document.getElementById("productList")
-list.innerHTML=""
+  // FITUR RAHASIA: Ketik 'clear' untuk hapus semua data riwayat lokal di HP
+  if(resi.toLowerCase() === "clear"){
+    if(confirm("Apakah kamu yakin ingin menghapus semua riwayat scan di aplikasi ini?")){
+      history = [];
+      localStorage.removeItem("scanHistory");
+      renderHistory();
+      beepGudang();
+      showNotif("✓ RIWAYAT BERHASIL DI-RESET", "success");
+    }
+    document.getElementById("manualResi").value="";
+    return;
+  }
 
-Object.entries(modelData)
-.sort((a,b)=>b[1].total-a[1].total)
-.forEach(([model,data])=>{
+  saveResi(resi);
+  document.getElementById("manualResi").value="";
+};
 
-const div=document.createElement("div")
-div.className="card"
-div.innerHTML=`
-<strong>${model}</strong><br>
-Penjualan: ${data.total} |
-GMV: ${formatRupiah(data.totalGMV)}
-`
+async function saveResi(resi){
+  try{
+    const body = { resi: resi, status: currentMode, keterangan: "" };
+    
+    const r = await fetch(APP_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    });
 
-div.onclick=()=>showSKU(model,data)
-list.appendChild(div)
+    const json = await r.json();
 
-})
-
-const total=document.createElement("div")
-total.className="card"
-total.innerHTML=`
-<b>TOTAL KESELURUHAN</b><br><br>
-Total Qty : ${grandTotalQty}<br>
-Total GMV : ${formatRupiah(grandTotalGMV)}
-`
-list.appendChild(total)
+    if(json.success){
+      if(currentMode === "Diterima di Gudang"){ beepGudang(); } else { beepSuccess(); }
+      
+      history.unshift({ resi, status: currentMode, time: new Date().toLocaleString("id-ID") });
+      localStorage.setItem("scanHistory", JSON.stringify(history.slice(0, 100)));
+      renderHistory();
+      showNotif("✓ BERHASIL<br>" + currentMode, "success");
+    }
+    else if(json.duplicate){
+      beepDuplicate();
+      showNotif("⚠ RESI SUDAH TERCATAT", "warning");
+    }
+    else{
+      beepError();
+      showNotif(json.message || "ERROR", "error");
+    }
+  }catch(err){
+    beepError();
+    showNotif("Gagal koneksi", "error");
+  }
 }
 
-// ===== DETAIL =====
-function showSKU(model,data){
+function renderHistory(){
+  const body = document.getElementById("historyBody");
+  body.innerHTML = "";
+  let hariIniCount = 0;
+  const hariIniStr = new Date().toLocaleDateString("id-ID");
 
-analysisPage.style.display="none"
-detailPage.style.display="block"
+  history.forEach((item, index) => {
+    if(item.time && item.time.split(" ")[0] === hariIniStr) {
+      hariIniCount++;
+    }
+    
+    if(index < 20) {
+      let badge = "badge-keluar";
+      if(item.status === "Pengiriman Gagal") badge = "badge-gagal";
+      if(item.status === "Diterima di Gudang") badge = "badge-gudang";
 
-detailTitle.innerText=model
-detailContent.innerHTML=""
-
-const header=document.createElement("div")
-header.className="table-header"
-header.innerHTML=`
-<div class="col-no">No</div>
-<div>Variasi</div>
-<div class="col-qty">QTY</div>
-<div class="col-gmv">GMV</div>
-`
-detailContent.appendChild(header)
-
-Object.entries(data.sku)
-.sort((a,b)=>b[1].qty-a[1].qty)
-.forEach(([sku,val],i)=>{
-
-const row=document.createElement("div")
-row.className="table-row"
-row.innerHTML=`
-<div class="col-no">${i+1}</div>
-<div>${sku}</div>
-<div class="col-qty">${val.qty}</div>
-<div class="col-gmv">${formatRupiah(val.gmv)}</div>
-`
-detailContent.appendChild(row)
-
-})
-
-const total=document.createElement("div")
-total.className="total-box"
-total.innerHTML=`
-TOTAL MODEL<br><br>
-Total QTY : ${data.total}<br>
-Total GMV : ${formatRupiah(data.totalGMV)}
-`
-detailContent.appendChild(total)
+      body.innerHTML += `
+        <tr>
+          <td style="font-weight:600; color:#334155;">${item.resi}</td>
+          <td><span class="badge ${badge}">${item.status.replace(" ke Ekspedisi","").replace(" di Gudang","")}</span></td>
+        </tr>
+      `;
+    }
+  });
+  
+  document.getElementById("totalScan").innerText = history.length;
+  document.getElementById("totalHari").innerText = hariIniCount;
 }
-
-function backToList(){
-detailPage.style.display="none"
-analysisPage.style.display="block"
-}
-
-function formatRupiah(n){
-return n.toLocaleString("id-ID")
-}
-
 </script>
-
 </body>
 </html>
