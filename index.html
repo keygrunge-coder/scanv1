@@ -141,13 +141,15 @@ td { border-bottom: 1px solid #f1f5f9; }
 </div>
 
 <script>
-// URL Web App Google kamu yang baru saja dibuat
+// !!! PASTE URL WEB APP HASIL DEPLOY BARU KAMU DI SINI !!!
 const APP_URL = "https://script.google.com/macros/s/AKfycbwy8U1vgsrucO9LI_2mmwhWtcsCILrgWTipyRc9IvLnffyOHebhmDuRPRJEsCNkhYw3dg/exec";
 
 let currentMode = "Diserahkan ke Ekspedisi";
 let codeReader = null;
 let lastScan = "";
 let lastScanTime = 0;
+let videoTrack = null; // Menyimpan track kamera untuk flash
+let isFlashOn = false;
 
 let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
 renderHistory();
@@ -213,6 +215,12 @@ async function startScanner(){
     let backCamera = devices.find(d => /back|rear|environment/i.test(d.label));
     const selected = backCamera ? backCamera.deviceId : devices[0].deviceId;
 
+    // Ambil stream video asli agar bisa mengontrol hardware flash HP
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: selected, facingMode: "environment" }
+    });
+    videoTrack = stream.getVideoTracks()[0];
+
     codeReader.decodeFromVideoDevice(selected, "video", (result)=>{
       if(result){
         const code = result.text.trim();
@@ -228,13 +236,29 @@ async function startScanner(){
   }
 }
 
+// LOGIKA NYALAKAN FLASH HP BERJALAN
+document.getElementById("flashBtn").onclick = async () => {
+  if (!videoTrack) {
+    showNotif("Nyalakan kamera dulu, bro!", "warning");
+    return;
+  }
+  try {
+    isFlashOn = !isFlashOn;
+    await videoTrack.applyConstraints({
+      advanced: [{ torch: isFlashOn }]
+    });
+    document.getElementById("flashBtn").innerText = isFlashOn ? "Matikan Flash" : "Flash";
+  } catch (err) {
+    showNotif("HP / Browser tidak mendukung Flash", "error");
+  }
+};
+
 document.getElementById("startBtn").onclick = startScanner;
 
 document.getElementById("manualBtn").onclick = ()=>{
   const resi = document.getElementById("manualResi").value.trim();
   if(!resi) return;
 
-  // FITUR RAHASIA: Ketik 'clear' untuk hapus semua data riwayat lokal di HP
   if(resi.toLowerCase() === "clear"){
     if(confirm("Apakah kamu yakin ingin menghapus semua riwayat scan di aplikasi ini?")){
       history = [];
@@ -267,14 +291,15 @@ async function saveResi(resi){
     if(json.success){
       if(currentMode === "Diterima di Gudang"){ beepGudang(); } else { beepSuccess(); }
       
+      // Update history lokal di aplikasi
       history.unshift({ resi, status: currentMode, time: new Date().toLocaleString("id-ID") });
       localStorage.setItem("scanHistory", JSON.stringify(history.slice(0, 100)));
       renderHistory();
-      showNotif("✓ BERHASIL<br>" + currentMode, "success");
+      showNotif("✓ BERHASIL UPDATE<br>" + currentMode, "success");
     }
     else if(json.duplicate){
       beepDuplicate();
-      showNotif("⚠ RESI SUDAH TERCATAT", "warning");
+      showNotif("⚠ RESI & STATUS SUDAH SAMA", "warning");
     }
     else{
       beepError();
