@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Scan Paket V3</title>
+<title>Scan Paket V3 - Mode Jepret Manual</title>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <style>
@@ -52,10 +52,12 @@ h1{ text-align: center; margin: 10px 0 20px 0; font-size: 22px; font-weight: 800
 .status-gudang{ background: var(--gudang-bg); color: var(--gudang-text); }
 
 video{ width: 100%; border-radius: 10px; background: black; max-height: 260px; object-fit: cover; margin-bottom: 10px; }
-.btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
-.btn{ width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 8px; }
+.btn{ width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
 .btn-primary{ background: var(--primary); color: white; }
 .btn-dark{ background: var(--dark); color: white; }
+.btn-success{ background: #10b981; color: white; font-size: 16px; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+.btn-success:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
 
 input{ width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; margin-bottom: 8px; font-size: 14px; outline: none; }
 
@@ -70,16 +72,20 @@ th,td{ padding: 10px 6px; font-size: 13px; text-align: left; }
 th{ background: #f8fafc; color: #64748b; font-weight: 700; position: sticky; top: 0; }
 td { border-bottom: 1px solid #f1f5f9; }
 
-.badge{ padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.badge{ padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-block; }
 .badge-keluar{ background: var(--keluar-bg); color: var(--keluar-text); }
 .badge-gagal{ background: var(--gagal-bg); color: var(--gagal-text); }
 .badge-gudang{ background: var(--gudang-bg); color: var(--gudang-text); }
+.badge-duplikat{ background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+/* Canvas disembunyikan karena hanya dipakai alat bantu tangkap gambar */
+canvas { display: none; }
 </style>
 </head>
 
 <body>
 
-<h1>SCAN PAKET SRFOOTWEAR</h1>
+<h1>SCAN PAKET V3</h1>
 
 <div class="counter">
   <div class="counter-box">
@@ -105,11 +111,12 @@ td { border-bottom: 1px solid #f1f5f9; }
 </div>
 
 <div class="card">
-  <video id="video"></video>
+  <video id="video" autoplay playsinline></video>
   <div class="btn-group">
-    <button id="startBtn" class="btn btn-primary">Mulai Scan Kamera</button>
+    <button id="startBtn" class="btn btn-primary">Aktifkan Kamera</button>
     <button id="flashBtn" class="btn btn-dark">Flash</button>
   </div>
+  <button id="snapBtn" class="btn btn-success" disabled>📸 JEPRET & PROSES RESI</button>
 </div>
 
 <div class="card">
@@ -135,16 +142,17 @@ td { border-bottom: 1px solid #f1f5f9; }
   </div>
 </div>
 
+<canvas id="canvas"></canvas>
+
 <script>
-// Menggunakan URL Web App terbaru milikmu
-const APP_URL = "https://script.google.com/macros/s/AKfycbwa0TkNJEaxsQ41EsiCjvI-gJ1-zL7BZEbdkYIMMOkFZ58PooFUEzX5mp0MLVZtKOxn9g/exec/exec";
+// URL Web App terbaru milikmu (Tetap pakai yang ini)
+const APP_URL = "https://script.google.com/macros/s/AKfycbxvQtRAV3omIsGe6Gmz2jazy_bx6OK4RoE-4LRBNF1CYrmh1fbV-H9CmLjQ9QBq5EVvQw/exec";
 
 let currentMode = "Diserahkan ke Ekspedisi";
 let codeReader = null;
-let lastScan = "";
-let lastScanTime = 0;
 let videoTrack = null;
 let isFlashOn = false;
+let isProcessing = false;
 
 let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
 renderHistory();
@@ -187,52 +195,82 @@ function beep(freq, duration){
   } catch(e){}
 }
 
-function beepSuccess(){ beep(1000, 0.1); }
-function beepDuplicate(){ beep(300, 0.5); }
-function beepError(){ beep(150, 0.5); }
+function beepSuccess(){ beep(1000, 0.08); }
+function beepDuplicate(){ beep(350, 0.4); } 
+function beepError(){ beep(150, 0.4); }
 
 function showNotif(text, type){
   const n = document.getElementById("notif");
   n.style.display = "block";
   n.className = type === "warning" ? "warning" : (type === "error" ? "error" : "success");
   n.innerHTML = text;
-  setTimeout(()=>{ n.style.display="none"; }, 2000);
+  setTimeout(()=>{ n.style.display="none"; }, 2500);
 }
 
-async function startScanner(){
+// 1. HIDUPKAN KAMERA (Hanya streaming video murni, makanya enteng banget)
+async function startCamera(){
   try{
-    if(codeReader) { codeReader.reset(); }
     codeReader = new ZXing.BrowserMultiFormatReader();
     const devices = await codeReader.listVideoInputDevices();
     let backCamera = devices.find(d => /back|rear|environment/i.test(d.label));
     const selected = backCamera ? backCamera.deviceId : devices[0].deviceId;
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: selected, facingMode: "environment" }
+      video: { deviceId: selected, facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
     });
-    videoTrack = stream.getVideoTracks()[0];
     
-    document.getElementById("video").srcObject = stream;
-
-    codeReader.decodeFromVideoDevice(selected, "video", (result)=>{
-      if(result){
-        const code = result.text.trim();
-        // Validasi: Tolak mentah-mentah jika resi kosong/terlalu pendek
-        if(!code || code.length < 3) return; 
-        
-        const now = Date.now();
-        // Jeda responsif ditingkatkan (1.5 detik)
-        if(code === lastScan && now - lastScanTime < 1500){ return; }
-        
-        lastScan = code;
-        lastScanTime = now;
-        saveResi(code);
-      }
-    });
+    videoTrack = stream.getVideoTracks()[0];
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+    
+    document.getElementById("snapBtn").disabled = false;
+    document.getElementById("startBtn").innerText = "Kamera Aktif";
+    showNotif("Kamera siap! Arahkan ke resi lalu klik Jepret", "success");
   }catch(err){
     showNotif("Gagal membuka kamera", "error");
   }
 }
+
+// 2. FUNGSI UTAMA: KETIKA TOMBOL JEPRET DIKLIK MANUAL
+document.getElementById("snapBtn").onclick = async () => {
+  if (isProcessing) return;
+  
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  
+  if (!video.srcObject) {
+    showNotif("Aktifkan kamera dulu, bro!", "warning");
+    return;
+  }
+
+  isProcessing = true;
+  document.getElementById("snapBtn").innerText = "⏳ Membaca Barcode...";
+  
+  try {
+    // Ambil gambar satu frame dari video streaming ke canvas internal
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Paksa pembacaan gambar hasil jepretan lewat library ZXing
+    const result = await codeReader.decodeFromCanvas(canvas);
+    const code = result.text.trim();
+    
+    if (code && code.length >= 5) {
+      await saveResi(code); // Kirim ke server
+    } else {
+      beepError();
+      showNotif("Gagal membaca! Pastikan posisi barcode jelas & pas", "error");
+    }
+  } catch (err) {
+    beepError();
+    showNotif("Barcode tidak terdeteksi. Coba jepret lagi!", "error");
+  } finally {
+    isProcessing = false;
+    document.getElementById("snapBtn").innerText = "📸 JEPRET & PROSES RESI";
+  }
+};
 
 document.getElementById("flashBtn").onclick = async () => {
   if (!videoTrack) {
@@ -241,20 +279,18 @@ document.getElementById("flashBtn").onclick = async () => {
   }
   try {
     isFlashOn = !isFlashOn;
-    await videoTrack.applyConstraints({
-      advanced: [{ torch: isFlashOn }]
-    });
+    await videoTrack.applyConstraints({ advanced: [{ torch: isFlashOn }] });
     document.getElementById("flashBtn").innerText = isFlashOn ? "Matikan Flash" : "Flash";
   } catch (err) {
-    showNotif("Flash tidak didukung hardware/browser", "error");
+    showNotif("Flash tidak didukung hardware", "error");
   }
 };
 
-document.getElementById("startBtn").onclick = startScanner;
+document.getElementById("startBtn").onclick = startCamera;
 
 document.getElementById("manualBtn").onclick = ()=>{
   const resi = document.getElementById("manualResi").value.trim();
-  if(!resi) return;
+  if(!resi || isProcessing) return;
 
   if(resi.toLowerCase() === "clear"){
     if(confirm("Hapus semua riwayat lokal di HP?")){
@@ -273,7 +309,7 @@ document.getElementById("manualBtn").onclick = ()=>{
 
 async function saveResi(resi){
   try{
-    const body = { resi: resi, status: currentMode, keterangan: "" };
+    const body = { resi: resi, status: currentMode };
     
     const r = await fetch(APP_URL, {
       method: "POST",
@@ -286,18 +322,19 @@ async function saveResi(resi){
 
     if(json.success){
       beepSuccess();
-      
-      // Update daftar riwayat lokal di aplikasi HP
-      history.unshift({ resi, status: currentMode, time: new Date().toLocaleString("id-ID") });
+      history.unshift({ resi, status: currentMode, displayStatus: currentMode, time: new Date().toLocaleString("id-ID") });
       localStorage.setItem("scanHistory", JSON.stringify(history.slice(0, 100)));
       renderHistory();
       showNotif("✓ BERHASIL UPDATE<br>" + resi, "success");
     }
     else if(json.duplicate){
       beepDuplicate();
-      showNotif("⚠ RESI & STATUS SUDAH SAMA", "warning");
+      history.unshift({ resi, status: "DUPLIKAT", displayStatus: "Resi & Status Sudah Sama", time: new Date().toLocaleString("id-ID") });
+      localStorage.setItem("scanHistory", JSON.stringify(history.slice(0, 100)));
+      renderHistory();
+      showNotif("⚠ GAGAL: RESI & STATUS SUDAH SAMA", "warning");
     }
-    else{
+    else {
       beepError();
       showNotif(json.message || "ERROR SERVER", "error");
     }
@@ -322,11 +359,12 @@ function renderHistory(){
       let badge = "badge-keluar";
       if(item.status === "Pengiriman Gagal") badge = "badge-gagal";
       if(item.status === "Diterima di Gudang") badge = "badge-gudang";
+      if(item.status === "DUPLIKAT") badge = "badge-duplikat";
 
       body.innerHTML += `
         <tr>
           <td style="font-weight:600; color:#334155;">${item.resi}</td>
-          <td><span class="badge ${badge}">${item.status.replace(" ke Ekspedisi","").replace(" di Gudang","")}</span></td>
+          <td><span class="badge ${badge}">${item.displayStatus.replace(" ke Ekspedisi","").replace(" di Gudang","")}</span></td>
         </tr>
       `;
     }
