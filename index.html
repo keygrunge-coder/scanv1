@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SRF - Shopee Data Sekar Footwear</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body{font-family:Arial;margin:0;background:#f3f4f6}
+.header{background:#111827;color:white;padding:14px 20px}
+.container{padding:20px}
+.card{background:white;padding:16px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.upload-box{border:2px dashed #d1d5db;padding:40px;text-align:center;border-radius:12px;background:#fafafa}
+button{padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:white;font-weight:bold}
+
+.table-header,.table-row{
+display:grid;
+grid-template-columns:50px 1fr 80px 120px;
+gap:10px;padding:10px 0;align-items:center;
+}
+.table-header{font-weight:bold;border-bottom:2px solid #e5e7eb}
+.table-row{border-bottom:1px solid #eee}
+.col-no{text-align:center}
+.col-qty{text-align:right;font-weight:bold}
+.col-gmv{text-align:right}
+
+.total-box{margin-top:20px;padding:14px;background:#f9fafb;border-radius:10px;font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<b>SRF Dashboard</b><br>
+<small>Shopee Data Sekar Footwear</small>
+</div>
+
+<div id="uploadPage" class="container">
+
+<div class="card">
+Export data dari Seller Centre → Pesanan Saya → Export (.xlsx)
+</div>
+
+<div class="upload-box">
+<input type="file" id="fileInput" accept=".xlsx,.csv"><br><br>
+<div id="status">Menunggu file...</div><br>
+<button id="processBtn" disabled>Proses Data</button>
+</div>
+
+</div>
+
+<div id="analysisPage" class="container" style="display:none;">
+<h2>Peringkat Produk</h2>
+<div id="productList"></div>
+</div>
+
+<div id="detailPage" class="container" style="display:none;">
+<button onclick="backToList()">← Kembali</button>
+<h2 id="detailTitle"></h2>
+<div id="detailContent"></div>
+</div>
+
+<script>
+
+let rawData=[]
+let modelData={}
+let grandTotalQty=0
+let grandTotalGMV=0
+
+// ===== FILE LOAD =====
+document.getElementById("fileInput").addEventListener("change",()=>{
+document.getElementById("status").innerText="File siap diproses"
+document.getElementById("processBtn").disabled=false
+})
+
+document.getElementById("processBtn").onclick=()=>{
+
+const file=document.getElementById("fileInput").files[0]
+const reader=new FileReader()
+
+reader.onload=e=>{
+const data=new Uint8Array(e.target.result)
+const workbook=XLSX.read(data,{type:'array'})
+const sheet=workbook.Sheets[workbook.SheetNames[0]]
+rawData=XLSX.utils.sheet_to_json(sheet)
+processData()
+}
+
+reader.readAsArrayBuffer(file)
+}
+
+// ===== AUTO DETECT COLUMN =====
+function getValue(row,keys){
+for(let k of keys){
+if(row[k]!==undefined) return row[k]
+}
+return null
+}
+
+// ===== PROCESS =====
+function processData(){
+
+modelData={}
+grandTotalQty=0
+grandTotalGMV=0
+
+rawData.forEach(row=>{
+
+const model=getValue(row,[
+"Nama Produk","Produk","Nama Barang"
+])
+
+const sku=getValue(row,[
+"Nama Variasi","Variasi","SKU"
+])
+
+const qty=Number(getValue(row,[
+"Jumlah","Qty","Kuantitas"
+])||0)
+
+const gmv=Number(getValue(row,[
+"Total Harga Produk","Total","GMV"
+])||0)
+
+if(!model || qty===0) return
+
+if(!modelData[model]){
+modelData[model]={total:0,totalGMV:0,sku:{}}
+}
+
+modelData[model].total+=qty
+modelData[model].totalGMV+=gmv
+
+grandTotalQty+=qty
+grandTotalGMV+=gmv
+
+if(!modelData[model].sku[sku]){
+modelData[model].sku[sku]={qty:0,gmv:0}
+}
+
+modelData[model].sku[sku].qty+=qty
+modelData[model].sku[sku].gmv+=gmv
+
+})
+
+showModels()
+}
+
+// ===== MODEL LIST =====
+function showModels(){
+
+uploadPage.style.display="none"
+analysisPage.style.display="block"
+
+const list=document.getElementById("productList")
+list.innerHTML=""
+
+Object.entries(modelData)
+.sort((a,b)=>b[1].total-a[1].total)
+.forEach(([model,data])=>{
+
+const div=document.createElement("div")
+div.className="card"
+div.innerHTML=`
+<strong>${model}</strong><br>
+Penjualan: ${data.total} |
+GMV: ${formatRupiah(data.totalGMV)}
+`
+
+div.onclick=()=>showSKU(model,data)
+list.appendChild(div)
+
+})
+
+const total=document.createElement("div")
+total.className="card"
+total.innerHTML=`
+<b>TOTAL KESELURUHAN</b><br><br>
+Total Qty : ${grandTotalQty}<br>
+Total GMV : ${formatRupiah(grandTotalGMV)}
+`
+list.appendChild(total)
+}
+
+// ===== DETAIL =====
+function showSKU(model,data){
+
+analysisPage.style.display="none"
+detailPage.style.display="block"
+
+detailTitle.innerText=model
+detailContent.innerHTML=""
+
+const header=document.createElement("div")
+header.className="table-header"
+header.innerHTML=`
+<div class="col-no">No</div>
+<div>Variasi</div>
+<div class="col-qty">QTY</div>
+<div class="col-gmv">GMV</div>
+`
+detailContent.appendChild(header)
+
+Object.entries(data.sku)
+.sort((a,b)=>b[1].qty-a[1].qty)
+.forEach(([sku,val],i)=>{
+
+const row=document.createElement("div")
+row.className="table-row"
+row.innerHTML=`
+<div class="col-no">${i+1}</div>
+<div>${sku}</div>
+<div class="col-qty">${val.qty}</div>
+<div class="col-gmv">${formatRupiah(val.gmv)}</div>
+`
+detailContent.appendChild(row)
+
+})
+
+const total=document.createElement("div")
+total.className="total-box"
+total.innerHTML=`
+TOTAL MODEL<br><br>
+Total QTY : ${data.total}<br>
+Total GMV : ${formatRupiah(data.totalGMV)}
+`
+detailContent.appendChild(total)
+}
+
+function backToList(){
+detailPage.style.display="none"
+analysisPage.style.display="block"
+}
+
+function formatRupiah(n){
+return n.toLocaleString("id-ID")
+}
+
+</script>
+
+</body>
+</html>
