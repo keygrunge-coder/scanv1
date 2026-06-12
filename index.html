@@ -9,10 +9,9 @@
 <style>
 :root {
   --primary: #2563eb;
-  --primary-hover: #1d4ed8;
   --dark: #0f172a;
   --bg-body: #f8fafc;
-  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
   
   --keluar-main: #22c55e;
   --keluar-bg: #dcfce7;
@@ -45,31 +44,27 @@ h1{ text-align: center; margin: 10px 0 20px 0; font-size: 22px; font-weight: 800
 .gagal{ background: var(--gagal-main); }
 .gudang{ background: var(--gudang-main); }
 .mode-btn.active{ opacity: 1; transform: scale(1.01); }
-.keluar.active { border-color: #15803d; }
-.gagal.active { border-color: #b45309; }
-.gudang.active { border-color: #b91c1c; }
 
-.status-box{ text-align: center; font-size: 12px; font-weight: 800; padding: 12px; border-radius: 10px; margin-bottom: 14px; box-shadow: var(--card-shadow); letter-spacing: 0.5px; }
+.status-box{ text-align: center; font-size: 12px; font-weight: 800; padding: 12px; border-radius: 10px; margin-bottom: 14px; box-shadow: var(--card-shadow); }
 .status-box span { font-size: 16px; display: block; margin-top: 2px; }
 .status-keluar{ background: var(--keluar-bg); color: var(--keluar-text); }
 .status-gagal{ background: var(--gagal-bg); color: var(--gagal-text); }
 .status-gudang{ background: var(--gudang-bg); color: var(--gudang-text); }
 
-video{ width: 100%; border-radius: 10px; background: black; max-height: 280px; object-fit: cover; margin-bottom: 10px; }
+video{ width: 100%; border-radius: 10px; background: black; max-height: 260px; object-fit: cover; margin-bottom: 10px; }
 .btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
 .btn{ width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
 .btn-primary{ background: var(--primary); color: white; }
 .btn-dark{ background: var(--dark); color: white; }
 
 input{ width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; margin-bottom: 8px; font-size: 14px; outline: none; }
-input:focus { border-color: var(--primary); }
 
 #notif{ position: fixed; top: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 470px; z-index: 9999; padding: 14px; border-radius: 10px; font-weight: 700; text-align: center; box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1); display: none; }
 .success{ background: #10b981; color: white; }
 .warning{ background: var(--gagal-main); color: white; }
 .error{ background: var(--gudang-main); color: white; }
 
-.history-container { max-height: 200px; overflow-y: auto; }
+.history-container { max-height: 240px; overflow-y: auto; }
 table{ width: 100%; border-collapse: collapse; }
 th,td{ padding: 10px 6px; font-size: 13px; text-align: left; }
 th{ background: #f8fafc; color: #64748b; font-weight: 700; position: sticky; top: 0; }
@@ -84,7 +79,7 @@ td { border-bottom: 1px solid #f1f5f9; }
 
 <body>
 
-<h1>SCAN PAKET V3</h1>
+<h1>SCAN PAKET SRFOOTWEAR</h1>
 
 <div class="counter">
   <div class="counter-box">
@@ -141,14 +136,14 @@ td { border-bottom: 1px solid #f1f5f9; }
 </div>
 
 <script>
-// !!! PASTE URL WEB APP HASIL DEPLOY BARU KAMU DI SINI !!!
-const APP_URL = "https://script.google.com/macros/s/AKfycbwy8U1vgsrucO9LI_2mmwhWtcsCILrgWTipyRc9IvLnffyOHebhmDuRPRJEsCNkhYw3dg/exec";
+// Menggunakan URL Web App terbaru milikmu
+const APP_URL = "https://script.google.com/macros/s/AKfycbxvQtRAV3omIsGe6Gmz2jazy_bx6OK4RoE-4LRBNF1CYrmh1fbV-H9CmLjQ9QBq5EVvQw/exec";
 
 let currentMode = "Diserahkan ke Ekspedisi";
 let codeReader = null;
 let lastScan = "";
 let lastScanTime = 0;
-let videoTrack = null; // Menyimpan track kamera untuk flash
+let videoTrack = null;
 let isFlashOn = false;
 
 let history = JSON.parse(localStorage.getItem("scanHistory") || "[]");
@@ -182,50 +177,53 @@ function setMode(mode){
 }
 
 function beep(freq, duration){
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.frequency.value = freq;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + duration);
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = freq;
+    osc.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch(e){}
 }
 
-function beepSuccess(){ beep(1000, 0.12); }
-function beepDuplicate(){ beep(300, 0.8); }
-function beepError(){ beep(150, 0.6); }
-function beepGudang(){
-  beep(900, 0.08);
-  setTimeout(()=>{ beep(900, 0.08); }, 150);
-}
+function beepSuccess(){ beep(1000, 0.1); }
+function beepDuplicate(){ beep(300, 0.5); }
+function beepError(){ beep(150, 0.5); }
 
 function showNotif(text, type){
   const n = document.getElementById("notif");
   n.style.display = "block";
-  n.className = "success"; 
-  if(type === "warning") n.className = "warning";
-  if(type === "error") n.className = "error";
+  n.className = type === "warning" ? "warning" : (type === "error" ? "error" : "success");
   n.innerHTML = text;
-  setTimeout(()=>{ n.style.display="none"; }, 3000);
+  setTimeout(()=>{ n.style.display="none"; }, 2000);
 }
 
 async function startScanner(){
   try{
+    if(codeReader) { codeReader.reset(); }
     codeReader = new ZXing.BrowserMultiFormatReader();
     const devices = await codeReader.listVideoInputDevices();
     let backCamera = devices.find(d => /back|rear|environment/i.test(d.label));
     const selected = backCamera ? backCamera.deviceId : devices[0].deviceId;
 
-    // Ambil stream video asli agar bisa mengontrol hardware flash HP
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: selected, facingMode: "environment" }
     });
     videoTrack = stream.getVideoTracks()[0];
+    
+    document.getElementById("video").srcObject = stream;
 
     codeReader.decodeFromVideoDevice(selected, "video", (result)=>{
       if(result){
         const code = result.text.trim();
+        // Validasi: Tolak mentah-mentah jika resi kosong/terlalu pendek
+        if(!code || code.length < 3) return; 
+        
         const now = Date.now();
-        if(code === lastScan && now - lastScanTime < 3000){ return; }
+        // Jeda responsif ditingkatkan (1.5 detik)
+        if(code === lastScan && now - lastScanTime < 1500){ return; }
+        
         lastScan = code;
         lastScanTime = now;
         saveResi(code);
@@ -236,10 +234,9 @@ async function startScanner(){
   }
 }
 
-// LOGIKA NYALAKAN FLASH HP BERJALAN
 document.getElementById("flashBtn").onclick = async () => {
   if (!videoTrack) {
-    showNotif("Nyalakan kamera dulu, bro!", "warning");
+    showNotif("Mulai kamera dahulu!", "warning");
     return;
   }
   try {
@@ -249,7 +246,7 @@ document.getElementById("flashBtn").onclick = async () => {
     });
     document.getElementById("flashBtn").innerText = isFlashOn ? "Matikan Flash" : "Flash";
   } catch (err) {
-    showNotif("HP / Browser tidak mendukung Flash", "error");
+    showNotif("Flash tidak didukung hardware/browser", "error");
   }
 };
 
@@ -260,12 +257,11 @@ document.getElementById("manualBtn").onclick = ()=>{
   if(!resi) return;
 
   if(resi.toLowerCase() === "clear"){
-    if(confirm("Apakah kamu yakin ingin menghapus semua riwayat scan di aplikasi ini?")){
+    if(confirm("Hapus semua riwayat lokal di HP?")){
       history = [];
       localStorage.removeItem("scanHistory");
       renderHistory();
-      beepGudang();
-      showNotif("✓ RIWAYAT BERHASIL DI-RESET", "success");
+      showNotif("✓ RIWAYAT RESET", "success");
     }
     document.getElementById("manualResi").value="";
     return;
@@ -289,13 +285,13 @@ async function saveResi(resi){
     const json = await r.json();
 
     if(json.success){
-      if(currentMode === "Diterima di Gudang"){ beepGudang(); } else { beepSuccess(); }
+      beepSuccess();
       
-      // Update history lokal di aplikasi
+      // Update daftar riwayat lokal di aplikasi HP
       history.unshift({ resi, status: currentMode, time: new Date().toLocaleString("id-ID") });
       localStorage.setItem("scanHistory", JSON.stringify(history.slice(0, 100)));
       renderHistory();
-      showNotif("✓ BERHASIL UPDATE<br>" + currentMode, "success");
+      showNotif("✓ BERHASIL UPDATE<br>" + resi, "success");
     }
     else if(json.duplicate){
       beepDuplicate();
@@ -303,11 +299,11 @@ async function saveResi(resi){
     }
     else{
       beepError();
-      showNotif(json.message || "ERROR", "error");
+      showNotif(json.message || "ERROR SERVER", "error");
     }
   }catch(err){
     beepError();
-    showNotif("Gagal koneksi", "error");
+    showNotif("Gagal koneksi internet", "error");
   }
 }
 
