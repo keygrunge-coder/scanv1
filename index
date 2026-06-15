@@ -3,33 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUSAT KOMANDO PACKING V5</title>
+    <title>SEKARFOOTWEAR - PUSAT KOMANDO V5</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#003399">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://unpkg.com/html5-qrcode"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f4f4f4; text-align: center; }
+        :root {
+            --primary: #003399;
+            --dark: #0f172a;
+            --bg-body: #f8fafc;
+            --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            --keluar-bg: #dcfce7;
+            --keluar-text: #166534;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: var(--bg-body); padding: 10px; color: #334155; max-width: 500px; margin: 0 auto; }
         
-        /* HEADER & MENU NAVIGASI */
-        .header-box { background: #003399; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-        .btn-nav { background: #cc0000; color: white; border: none; padding: 8px 15px; font-weight: bold; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 5px; }
+        /* HEADER NAVIGASI PUSAT KOMANDO */
+        .header-box { background: var(--primary); color: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; text-align: center; }
+        .btn-nav { background: #cc0000; color: white; border: none; padding: 8px 15px; font-weight: bold; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 5px; font-size: 13px; }
         
-        /* KOTAK DASHBOARD REKAP DI HP */
+        /* LIVE DASHBOARD DI LAYAR HP */
         .dash-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
-        .dash-card { background: white; padding: 10px 5px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .dash-card h4 { margin: 0; font-size: 11px; color: #666; text-transform: uppercase; }
-        .dash-card p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #003399; }
-        
-        /* INDIKATOR m-BCA */
+        .dash-card { background: white; padding: 10px 5px; border-radius: 10px; text-align: center; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+        .dash-card h4 { margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+        .dash-card p { margin: 5px 0 0 0; font-size: 20px; font-weight: 800; color: var(--primary); }
+
+        .card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+        .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #475569; text-transform: uppercase; }
+
+        /* INDIKATOR m-BCA STYLE */
         #bca-indicator { width: 70px; height: 70px; border-radius: 50%; background-color: #ff3333; margin: 10px auto; box-shadow: 0 0 12px rgba(0,0,0,0.2); transition: background-color 0.3s ease; }
-        #status-message { font-size: 16px; font-weight: bold; margin: 10px 0; color: #333; }
+        #status-message { font-size: 15px; font-weight: bold; margin: 10px 0; color: #334155; text-align: center; }
+
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; border: none !important; background: black; }
         
-        #reader { width: 100%; max-width: 450px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
-        .btn-offline { background-color: #555; color: white; border: none; padding: 8px 15px; font-size: 13px; border-radius: 5px; cursor: pointer; margin-top: 15px; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-offline { background-color: #555; color: white; border: none; padding: 8px 15px; font-size: 13px; border-radius: 5px; cursor: pointer; margin-top: 10px; display: inline-block; width: 100%; }
+
+        input { width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; margin-bottom: 8px; font-size: 14px; outline: none; }
+
+        #notif { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 470px; z-index: 9999; padding: 14px; border-radius: 10px; font-weight: 700; text-align: center; box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1); display: none; }
+        .success { background: #10b981; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        .error { background: #ef4444; color: white; }
+
+        .history-container { max-height: 200px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 6px; font-size: 13px; text-align: left; }
+        th { background: #f8fafc; color: #64748b; font-weight: 700; position: sticky; top: 0; }
+        td { border-bottom: 1px solid #f1f5f9; }
+
+        .badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-block; }
+        .badge-keluar { background: var(--keluar-bg); color: var(--keluar-text); }
+        .badge-duplikat { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .badge-invalid { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
     </style>
 </head>
+
 <body>
 
     <div class="header-box">
-        <h3 style="margin: 0; font-size: 16px;">📦 SCANNER PAKET KELUAR</h3>
+        <h3 style="margin: 0; font-size: 16px;">📦 SCANNER PAKET KELUAR V5</h3>
         <a href="retur.html" class="btn-nav">🔄 Pindah ke Scan RETUR</a>
     </div>
 
@@ -51,126 +91,160 @@
     <div id="bca-indicator"></div>
     <div id="status-message">Menyalakan Kamera...</div>
 
-    <div id="reader"></div>
+    <div class="card">
+        <div id="reader"></div>
+        <div style="margin-top: 10px;">
+            <button id="startBtn" class="btn btn-primary">Aktifkan Kamera Scanner</button>
+        </div>
+    </div>
 
-    <button class="btn-offline" onclick="downloadOfflineData()">📥 Download Data Offline</button>
-    <div style="font-size: 12px; color: #666; margin-top: 5px;">Data Antrean HP: <span id="local-slot">0</span> resi</div>
+    <div class="card">
+        <h3>Input Manual Resi</h3>
+        <input type="text" id="manualResi" placeholder="Masukkan nomor resi...">
+        <button id="manualBtn" class="btn btn-primary">Simpan Resi</button>
+    </div>
 
-    <script>
-        // ⚠️ PASANG LINK WEB APP GOOGLE SCRIPT LU DI SINI, BRO!
-        const WEB_APP_URL = "PASANG_LINK_WEB_APP_LU_DISINI"; 
-        
-        let localData = JSON.parse(localStorage.getItem('harian_offline_cache')) || [];
-        document.getElementById('local-slot').innerText = localData.length;
+    <div class="card" style="padding: 10px;">
+        <button class="btn-offline" onclick="downloadOfflineData()">📥 Download Data Offline</button>
+        <div style="font-size: 12px; color: #64748b; margin-top: 5px; font-weight: 600;">Data Antrean HP: <span id="local-slot">0</span> resi</div>
+    </div>
 
-        function robotBicara(teks) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let tts = new SpeechSynthesisUtterance(teks);
-                tts.lang = 'id-ID';
-                tts.rate = 1.2;
-                window.speechSynthesis.speak(tts);
+    <div id="notif"></div>
+
+    <div class="card">
+        <h3>Riwayat Terakhir</h3>
+        <div class="history-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resi</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+// LINK WEB APP RESMI MILIK LU:
+const APP_URL = "https://script.google.com/macros/s/AKfycbwa0TkNJEaxsQ41EsiCjvI-gJ1-zL7BZEbdkYIMMOkFZ58PooFUEzX5mp0MLVZtKOxn9g/exec";
+
+let html5QrCode = null;
+let isProcessing = false;
+
+// Load cache offline antrean harian
+let localData = JSON.parse(localStorage.getItem('harian_offline_cache')) || [];
+document.getElementById('local-slot').innerText = localData.length;
+
+// Load riwayat tabel bawah harian
+let scanHistory = JSON.parse(localStorage.getItem("scanHistory") || "[]");
+renderHistory();
+
+// Sistem Beep Suara Pendek
+function beep(freq, duration){
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.frequency.value = freq;
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+    } catch(e){}
+}
+function beepSuccess(){ beep(1000, 0.08); }
+function beepDuplicate(){ beep(350, 0.4); } 
+function beepError(){ beep(150, 0.4); }
+
+// Fitur Robot Google Bicara
+function robotBicara(teks) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        let tts = new SpeechSynthesisUtterance(teks);
+        tts.lang = 'id-ID';
+        tts.rate = 1.2;
+        window.speechSynthesis.speak(tts);
+    }
+}
+
+// Fitur Pengatur Warna Lampu m-BCA
+function setLampuBca(warna, pesan) {
+    const indikator = document.getElementById('bca-indicator');
+    document.getElementById('status-message').innerText = pesan;
+    if(warna === 'ijo') indikator.style.backgroundColor = '#00cc44';
+    if(warna === 'kuning') indikator.style.backgroundColor = '#ffcc00';
+    if(warna === 'merah') indikator.style.backgroundColor = '#ff3333';
+}
+
+function showNotif(text, type){
+    const n = document.getElementById("notif");
+    n.style.display = "block";
+    n.className = type === "warning" ? "warning" : (type === "error" ? "error" : "success");
+    n.innerHTML = text;
+    setTimeout(()=>{ n.style.display="none"; }, 2500);
+}
+
+// Fungsi Otomatis Tarik Angka Awal Dashboard saat Aplikasi Dibuka
+function muatDataDashboardAwal() {
+    fetch(`${APP_URL}?action=getDashboard`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            document.getElementById('load-hari-ini').innerText = data.hariIni;
+            document.getElementById('load-kemarin').innerText = data.kemarin;
+            document.getElementById('load-minggu').innerText = data.mingguIni;
+        }
+    }).catch(e => {});
+}
+
+// Mengaktifkan Kamera HP Android dengan Setelan Khusus Barcode Panjang Toko
+function startCamera() {
+    if(html5QrCode) {
+        showNotif("Kamera sudah aktif, bro!", "warning");
+        return;
+    }
+
+    html5QrCode = new Html5Qrcode("reader");
+    
+    const config = { 
+        fps: 20, 
+        qrbox: (width, height) => {
+            return { width: Math.floor(width * 0.85), height: Math.floor(height * 0.4) }
+        },
+        formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
+
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+            if(!isProcessing) {
+                isProcessing = true;
+                html5QrCode.pause(true); // Kunci kamera pas dapet kode resi
+                saveResi(decodedText.trim());
             }
-        }
+        },
+        (errorMessage) => {}
+    ).then(() => {
+        document.getElementById("startBtn").innerText = "Kamera Scanner Aktif";
+        setLampuBca('ijo', 'Sistem Siap Hantam Rata Paket!');
+        robotBicara("Sistem Siap");
+        muatDataDashboardAwal(); // Tarik data dari laptop pas kamera nyala
+    }).catch(err => {
+        setLampuBca('merah', 'Kamera Gagal Diakses');
+        showNotif("Gagal membuka akses kamera", "error");
+    });
+}
 
-        function setLampuBca(warna, pesan) {
-            const indikator = document.getElementById('bca-indicator');
-            document.getElementById('status-message').innerText = pesan;
-            if(warna === 'ijo') indikator.style.backgroundColor = '#00cc44';
-            if(warna === 'kuning') indikator.style.backgroundColor = '#ffcc00';
-            if(warna === 'merah') indikator.style.backgroundColor = '#ff3333';
-        }
+document.getElementById("startBtn").onclick = startCamera;
 
-        // Fungsi otomatis buat narik angka dashboard pas aplikasi pertama dibuka
-        function muatDataDashboardAwal() {
-            fetch(`${WEB_APP_URL}?action=getDashboard`)
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    document.getElementById('load-hari-ini').innerText = data.hariIni;
-                    document.getElementById('load-kemarin').innerText = data.kemarin;
-                    document.getElementById('load-minggu').innerText = data.mingguIni;
-                }
-            }).catch(e => { /* Sinyal offline, biarkan 0 dulu */ });
-        }
+// Tombol Simpan Manual Resi Ketik
+document.getElementById("manualBtn").onclick = ()=>{
+    const resi = document.getElementById("manualResi").value.trim();
+    if(!resi || isProcessing) return;
 
-        function startScanner() {
-            const html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 150 } },
-                (decodedText) => {
-                    html5QrcodeScanner.pause(true);
-                    prosesResiHarian(decodedText, html5QrcodeScanner);
-                },
-                (err) => {}
-            ).then(() => {
-                setLampuBca('ijo', 'Sistem Siap Hantam Rata Paket!');
-                robotBicara("Sistem Siap");
-                muatDataDashboardAwal(); // Tarik data pas kamera siap
-            }).catch(err => {
-                setLampuBca('merah', 'Kamera Gagal Diakses');
-            });
-        }
-
-        function prosesResiHarian(resiStr, scanner) {
-            let resiClean = resiStr.trim();
-            let resiUpper = resiClean.toUpperCase();
-            let ekspedisi = "Aneh";
-
-            if(resiUpper.indexOf("JX") === 0 || resiUpper.indexOf("JZ") === 0) ekspedisi = "J and T";
-            if(resiUpper.indexOf("SPX") === 0 || resiUpper.indexOf("SPXID") === 0) ekspedisi = "S P X";
-
-            if (!localData.includes(resiClean)) {
-                localData.push(resiClean);
-                localStorage.setItem('harian_offline_cache', JSON.stringify(localData));
-                document.getElementById('local-slot').innerText = localData.length;
-            }
-
-            setLampuBca('kuning', 'Mengirim Data...');
-            
-            fetch(WEB_APP_URL, {
-                method: "POST",
-                body: JSON.stringify({ resi: resiClean, source: "harian" })
-            })
-            .then(res => res.json())
-            .then(response => {
-                if(response.status === 'success') {
-                    setLampuBca('ijo', `Sukses! ${response.ekspedisi}`);
-                    robotBicara(`${ekspedisi}, Sukses.`);
-                    
-                    // UPDATE ANGKA REKAP DI LAYAR HP SECARA REALTIME PAS SCAN BERHASIL
-                    if(response.dashboard) {
-                        document.getElementById('load-hari-ini').innerText = response.dashboard.hariIni;
-                        document.getElementById('load-kemarin').innerText = response.dashboard.kemarin;
-                        document.getElementById('load-minggu').innerText = response.dashboard.mingguIni;
-                    }
-                } else if(response.status === 'duplicate') {
-                    setLampuBca('merah', 'Resi Dobel!');
-                    robotBicara("J and T, Dobel, Bro!");
-                } else if(response.status === 'invalid') {
-                    setLampuBca('merah', 'Resi Aneh Ditolak!');
-                    robotBicara("Resi Aneh Gagal");
-                }
-                setTimeout(() => { scanner.resume(); }, 1200);
-            })
-            .catch(err => {
-                setLampuBca('kuning', 'Sinyal Hilang! Resi Masuk Antrean');
-                robotBicara(`${ekspedisi}, Antre.`);
-                setTimeout(() => { scanner.resume(); }, 1200);
-            });
-        }
-
-        function downloadOfflineData() {
-            if(localData.length === 0) return alert("Belum ada data!");
-            let blob = new Blob([localData.join("\n")], { type: "text/plain;charset=utf-8" });
-            let a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `scan_harian_${new Date().toISOString().slice(0,10)}.txt`;
-            a.click();
-        }
-
-        window.onload = startScanner;
-    </script>
-</body>
-</html>
+    if(resi.toLowerCase() === "clear"){
+        if(confirm("Hapus semua riwayat lokal di HP?")){
