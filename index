@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUSAT KOMANDO PACKING V5</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f4f4f4; text-align: center; }
+        
+        /* HEADER & MENU NAVIGASI */
+        .header-box { background: #003399; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+        .btn-nav { background: #cc0000; color: white; border: none; padding: 8px 15px; font-weight: bold; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 5px; }
+        
+        /* KOTAK DASHBOARD REKAP DI HP */
+        .dash-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+        .dash-card { background: white; padding: 10px 5px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .dash-card h4 { margin: 0; font-size: 11px; color: #666; text-transform: uppercase; }
+        .dash-card p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #003399; }
+        
+        /* INDIKATOR m-BCA */
+        #bca-indicator { width: 70px; height: 70px; border-radius: 50%; background-color: #ff3333; margin: 10px auto; box-shadow: 0 0 12px rgba(0,0,0,0.2); transition: background-color 0.3s ease; }
+        #status-message { font-size: 16px; font-weight: bold; margin: 10px 0; color: #333; }
+        
+        #reader { width: 100%; max-width: 450px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+        .btn-offline { background-color: #555; color: white; border: none; padding: 8px 15px; font-size: 13px; border-radius: 5px; cursor: pointer; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-box">
+        <h3 style="margin: 0; font-size: 16px;">📦 SCANNER PAKET KELUAR</h3>
+        <a href="retur.html" class="btn-nav">🔄 Pindah ke Scan RETUR</a>
+    </div>
+
+    <div class="dash-container">
+        <div class="dash-card">
+            <h4>Hari Ini</h4>
+            <p id="load-hari-ini">0</p>
+        </div>
+        <div class="dash-card">
+            <h4>Hari Lalu</h4>
+            <p id="load-kemarin">0</p>
+        </div>
+        <div class="dash-card">
+            <h4>Minggu Ini</h4>
+            <p id="load-minggu">0</p>
+        </div>
+    </div>
+
+    <div id="bca-indicator"></div>
+    <div id="status-message">Menyalakan Kamera...</div>
+
+    <div id="reader"></div>
+
+    <button class="btn-offline" onclick="downloadOfflineData()">📥 Download Data Offline</button>
+    <div style="font-size: 12px; color: #666; margin-top: 5px;">Data Antrean HP: <span id="local-slot">0</span> resi</div>
+
+    <script>
+        // ⚠️ PASANG LINK WEB APP GOOGLE SCRIPT LU DI SINI, BRO!
+        const WEB_APP_URL = "PASANG_LINK_WEB_APP_LU_DISINI"; 
+        
+        let localData = JSON.parse(localStorage.getItem('harian_offline_cache')) || [];
+        document.getElementById('local-slot').innerText = localData.length;
+
+        function robotBicara(teks) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let tts = new SpeechSynthesisUtterance(teks);
+                tts.lang = 'id-ID';
+                tts.rate = 1.2;
+                window.speechSynthesis.speak(tts);
+            }
+        }
+
+        function setLampuBca(warna, pesan) {
+            const indikator = document.getElementById('bca-indicator');
+            document.getElementById('status-message').innerText = pesan;
+            if(warna === 'ijo') indikator.style.backgroundColor = '#00cc44';
+            if(warna === 'kuning') indikator.style.backgroundColor = '#ffcc00';
+            if(warna === 'merah') indikator.style.backgroundColor = '#ff3333';
+        }
+
+        // Fungsi otomatis buat narik angka dashboard pas aplikasi pertama dibuka
+        function muatDataDashboardAwal() {
+            fetch(`${WEB_APP_URL}?action=getDashboard`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    document.getElementById('load-hari-ini').innerText = data.hariIni;
+                    document.getElementById('load-kemarin').innerText = data.kemarin;
+                    document.getElementById('load-minggu').innerText = data.mingguIni;
+                }
+            }).catch(e => { /* Sinyal offline, biarkan 0 dulu */ });
+        }
+
+        function startScanner() {
+            const html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    html5QrcodeScanner.pause(true);
+                    prosesResiHarian(decodedText, html5QrcodeScanner);
+                },
+                (err) => {}
+            ).then(() => {
+                setLampuBca('ijo', 'Sistem Siap Hantam Rata Paket!');
+                robotBicara("Sistem Siap");
+                muatDataDashboardAwal(); // Tarik data pas kamera siap
+            }).catch(err => {
+                setLampuBca('merah', 'Kamera Gagal Diakses');
+            });
+        }
+
+        function prosesResiHarian(resiStr, scanner) {
+            let resiClean = resiStr.trim();
+            let resiUpper = resiClean.toUpperCase();
+            let ekspedisi = "Aneh";
+
+            if(resiUpper.indexOf("JX") === 0 || resiUpper.indexOf("JZ") === 0) ekspedisi = "J and T";
+            if(resiUpper.indexOf("SPX") === 0 || resiUpper.indexOf("SPXID") === 0) ekspedisi = "S P X";
+
+            if (!localData.includes(resiClean)) {
+                localData.push(resiClean);
+                localStorage.setItem('harian_offline_cache', JSON.stringify(localData));
+                document.getElementById('local-slot').innerText = localData.length;
+            }
+
+            setLampuBca('kuning', 'Mengirim Data...');
+            
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ resi: resiClean, source: "harian" })
+            })
+            .then(res => res.json())
+            .then(response => {
+                if(response.status === 'success') {
+                    setLampuBca('ijo', `Sukses! ${response.ekspedisi}`);
+                    robotBicara(`${ekspedisi}, Sukses.`);
+                    
+                    // UPDATE ANGKA REKAP DI LAYAR HP SECARA REALTIME PAS SCAN BERHASIL
+                    if(response.dashboard) {
+                        document.getElementById('load-hari-ini').innerText = response.dashboard.hariIni;
+                        document.getElementById('load-kemarin').innerText = response.dashboard.kemarin;
+                        document.getElementById('load-minggu').innerText = response.dashboard.mingguIni;
+                    }
+                } else if(response.status === 'duplicate') {
+                    setLampuBca('merah', 'Resi Dobel!');
+                    robotBicara("J and T, Dobel, Bro!");
+                } else if(response.status === 'invalid') {
+                    setLampuBca('merah', 'Resi Aneh Ditolak!');
+                    robotBicara("Resi Aneh Gagal");
+                }
+                setTimeout(() => { scanner.resume(); }, 1200);
+            })
+            .catch(err => {
+                setLampuBca('kuning', 'Sinyal Hilang! Resi Masuk Antrean');
+                robotBicara(`${ekspedisi}, Antre.`);
+                setTimeout(() => { scanner.resume(); }, 1200);
+            });
+        }
+
+        function downloadOfflineData() {
+            if(localData.length === 0) return alert("Belum ada data!");
+            let blob = new Blob([localData.join("\n")], { type: "text/plain;charset=utf-8" });
+            let a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `scan_harian_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+        }
+
+        window.onload = startScanner;
+    </script>
+</body>
+</html>
